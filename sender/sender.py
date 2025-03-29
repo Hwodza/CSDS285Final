@@ -33,6 +33,6 @@ def send_data(server_url):
     print("Response:", response.status_code, response.text)
 
 if __name__ == "__main__":
-    server_url = "http://your-server-ip:5000"  # Replace with the actual IP of the Flask server
+    server_url = "http://107.21.161.21:5000"  # Replace with the actual IP of the Flask server
     send_data(server_url)
 
