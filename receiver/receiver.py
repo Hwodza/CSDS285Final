@@ -1,6 +1,11 @@
-from flask import Flask, request, jsonify, render_template_string
+from flask import Flask, request, jsonify
+from flask_cors import CORS  # Import CORS
 
 app = Flask(__name__)
+CORS(app, origins=["http://eecslab-22.case.edu"])  # Only allow this origin
+
+# CORS(app)  # Enable CORS for the entire app
+
 received_data = []  # Store received JSON objects
 
 @app.route('/data', methods=['POST'])
@@ -14,15 +19,7 @@ def receive_data():
 
 @app.route('/')
 def display_data():
-    return render_template_string('''
-        <html>
-        <head><title>Received JSON Data</title></head>
-        <body>
-            <h1>Received JSON Data</h1>
-            <pre>{{ data | tojson(indent=2) }}</pre>
-        </body>
-        </html>
-    ''', data=received_data)
+    return jsonify(received_data)
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8000, debug=True)
