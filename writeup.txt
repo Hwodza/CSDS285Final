@@ -1,0 +1,5 @@
+I want to make a program that can agragate machine stats (like cpu, memory, disk, network stats) from multiple devices, then centralize the data on one device to see. 
+So far I have implemented a script (sender.py )that uses sysstat to gather these stats, that then sends them to a server I have running on AWS.
+The AWS server has a file called receiver.py, that serves as an endpoint for the sender.py.
+In eecslab-22 I have a html file that pulls the json data from the server, then displays it in html. 
+  
