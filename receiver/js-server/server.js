@@ -174,6 +174,79 @@ async function startServer() {
             res.status(500).json({ error: 'Database error' });
         }
     });
+    app.get('/device/:id', (req, res) => {
+        res.sendFile(path.join(__dirname, 'public', 'device.html'));
+    });
+
+    app.get('/api/device/:id/history', async (req, res) => {
+        try {
+            const { id } = req.params;
+            const hours = parseInt(req.query.hours) || 24;
+            const cutoff = Math.floor(Date.now() / 1000) - (hours * 3600);
+
+            const rows = await db.all(`
+                SELECT * FROM device_stats
+                WHERE device_id = ? AND timestamp >= ?
+                ORDER BY timestamp ASC`,
+                [id, cutoff]
+            );
+
+            const result = {
+                timestamps: [],
+                cpu: [],
+                memory: [],
+                network: {},
+                disk: {}
+            };
+
+            // Initialize network interfaces
+            if (rows.length > 0) {
+                const first = JSON.parse(rows[0].network_data);
+                first.forEach(iface => {
+                    result.network[iface.iface] = { rx: [], tx: [] };
+                });
+            }
+
+            rows.forEach(row => {
+                const time = new Date(row.timestamp * 1000);
+                result.timestamps.push(time.toLocaleTimeString());
+
+                // CPU data
+                result.cpu.push(row.cpu_usage_percent);
+
+                // Memory data
+                result.memory.push({
+                    free: row.kbmemfree,
+                    used: row.kbmemused,
+                    percent: row.memused_percent
+                });
+
+                // Network data
+                const network = JSON.parse(row.network_data);
+                network.forEach(iface => {
+                    if (result.network[iface.iface]) {
+                        result.network[iface.iface].rx.push(iface.rx_kb);
+                        result.network[iface.iface].tx.push(iface.tx_kb);
+                    }
+                });
+
+                // Disk data (simplified example)
+                const disk = JSON.parse(row.disk_data);
+                disk.forEach(d => {
+                    if (!result.disk[d.device]) {
+                        result.disk[d.device] = { wait: [], util: [] };
+                    }
+                    result.disk[d.device].wait.push(d.wait);
+                    result.disk[d.device].util.push(d.util);
+                });
+            });
+
+            res.json(result);
+        } catch (e) {
+            console.error('Error fetching history:', e);
+            res.status(500).json({ error: 'Server error' });
+        }
+    });
 
     app.get('/', (req, res) => {
         res.sendFile(path.join(__dirname, 'public', 'index.html'));

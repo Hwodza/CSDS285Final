@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Device Details</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        .header {
+            margin-bottom: 20px;
+        }
+        .chart-container {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .chart-box {
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 15px;
+            background: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .chart-title {
+            margin-top: 0;
+            font-size: 1.1em;
+            color: #333;
+        }
+        .back-button {
+            padding: 8px 15px;
+            background: #f0f0f0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-bottom: 20px;
+        }
+        .time-range {
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <button class="back-button" onclick="window.history.back()">← Back to Devices</button>
+    <div class="header">
+        <h1 id="device-title">Device Statistics</h1>
+        <div class="time-range">
+            <label>Time Range: </label>
+            <select id="time-range">
+                <option value="1">Last 1 hour</option>
+                <option value="6">Last 6 hours</option>
+                <option value="24" selected>Last 24 hours</option>
+                <option value="168">Last 7 days</option>
+            </select>
+        </div>
+    </div>
+    
+    <div class="chart-container">
+        <div class="chart-box">
+            <h3 class="chart-title">CPU Usage (%)</h3>
+            <canvas id="cpuChart"></canvas>
+        </div>
+        
+        <div class="chart-box">
+            <h3 class="chart-title">Memory Usage (%)</h3>
+            <canvas id="memoryChart"></canvas>
+        </div>
+        
+        <div class="chart-box">
+            <h3 class="chart-title">Network Activity (KB/s)</h3>
+            <canvas id="networkChart"></canvas>
+        </div>
+        
+        <div class="chart-box">
+            <h3 class="chart-title">Disk Utilization (%)</h3>
+            <canvas id="diskChart"></canvas>
+        </div>
+    </div>
+
+    <script>
+        const deviceId = window.location.pathname.split('/').pop();
+        document.getElementById('device-title').textContent = `Device: ${deviceId}`;
+        
+        let cpuChart, memoryChart, networkChart, diskChart;
+        let currentData = null;
+
+        // Initialize charts
+        function initCharts() {
+            // CPU Chart
+            cpuChart = new Chart(
+                document.getElementById('cpuChart'),
+                {
+                    type: 'line',
+                    data: { labels: [], datasets: [] },
+                    options: {
+                        responsive: true,
+                        scales: { y: { beginAtZero: true } }
+                    }
+                }
+            );
+
+            // Memory Chart
+            memoryChart = new Chart(
+                document.getElementById('memoryChart'),
+                {
+                    type: 'line',
+                    data: { labels: [], datasets: [] },
+                    options: {
+                        responsive: true,
+                        scales: { y: { beginAtZero: true } }
+                    }
+                }
+            );
+
+            // Network Chart
+            networkChart = new Chart(
+                document.getElementById('networkChart'),
+                {
+                    type: 'line',
+                    data: { labels: [], datasets: [] },
+                    options: {
+                        responsive: true,
+                        scales: { y: { beginAtZero: true } }
+                    }
+                }
+            );
+
+            // Disk Chart
+            diskChart = new Chart(
+                document.getElementById('diskChart'),
+                {
+                    type: 'line',
+                    data: { labels: [], datasets: [] },
+                    options: {
+                        responsive: true,
+                        scales: { y: { beginAtZero: true } }
+                    }
+                }
+            );
+        }
+
+        // Update charts with data
+        function updateCharts(data) {
+            currentData = data;
+            
+            // Update CPU Chart
+            cpuChart.data.labels = data.timestamps;
+            cpuChart.data.datasets = [{
+                label: 'CPU Usage %',
+                data: data.cpu,
+                borderColor: 'rgb(75, 192, 192)',
+                tension: 0.1
+            }];
+            cpuChart.update();
+
+            // Update Memory Chart
+            memoryChart.data.labels = data.timestamps;
+            memoryChart.data.datasets = [{
+                label: 'Memory Used %',
+                data: data.memory.map(m => m.percent),
+                borderColor: 'rgb(54, 162, 235)',
+                tension: 0.1
+            }];
+            memoryChart.update();
+
+            // Update Network Chart
+            const networkDatasets = [];
+            Object.entries(data.network).forEach(([iface, stats], idx) => {
+                const colors = [
+                    'rgb(255, 99, 132)',
+                    'rgb(153, 102, 255)',
+                    'rgb(255, 159, 64)'
+                ];
+                networkDatasets.push({
+                    label: `${iface} Received`,
+                    data: stats.rx,
+                    borderColor: colors[idx % colors.length],
+                    tension: 0.1
+                });
+                networkDatasets.push({
+                    label: `${iface} Transmitted`,
+                    data: stats.tx,
+                    borderColor: colors[idx % colors.length],
+                    borderDash: [5, 5],
+                    tension: 0.1
+                });
+            });
+            networkChart.data.labels = data.timestamps;
+            networkChart.data.datasets = networkDatasets;
+            networkChart.update();
+
+            // Update Disk Chart
+            const diskDatasets = [];
+            Object.entries(data.disk).forEach(([device, stats], idx) => {
+                const colors = [
+                    'rgb(255, 205, 86)',
+                    'rgb(75, 192, 192)',
+                    'rgb(201, 203, 207)'
+                ];
+                diskDatasets.push({
+                    label: `${device} Utilization`,
+                    data: stats.util,
+                    borderColor: colors[idx % colors.length],
+                    tension: 0.1
+                });
+            });
+            diskChart.data.labels = data.timestamps;
+            diskChart.data.datasets = diskDatasets;
+            diskChart.update();
+        }
+
+        // Fetch data from server
+        async function fetchData(hours) {
+            try {
+                const response = await fetch(`/api/device/${deviceId}/history?hours=${hours}`);
+                const data = await response.json();
+                updateCharts(data);
+            } catch (error) {
+                console.error('Error fetching data:', error);
+            }
+        }
+
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', () => {
+            initCharts();
+            fetchData(24); // Default to 24 hours
+            
+            // Handle time range changes
+            document.getElementById('time-range').addEventListener('change', (e) => {
+                fetchData(e.target.value);
+            });
+        });
+    </script>
+</body>
+</html>

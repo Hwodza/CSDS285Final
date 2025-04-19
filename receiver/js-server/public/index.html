@@ -149,6 +149,17 @@
             setTimeout(() => window.location.reload(), 3000);
         };
 
+        // Add this to your existing JavaScript
+        function setupCardClickHandlers() {
+            document.addEventListener('click', (e) => {
+                const card = e.target.closest('.device-card');
+                if (card) {
+                    const deviceId = card.id.replace('card-', '');
+                    window.location.href = `/device/${deviceId}`;
+                }
+            });
+        }
+
         function showError(message) {
             errorPanel.textContent = message;
             errorPanel.style.display = 'block';
