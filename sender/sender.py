@@ -29,8 +29,8 @@ def get_sysstat():
             mem_parts = mem_lines[-1].split()
             memory_usage = {
                 "kbmemfree": mem_parts[1],
-                "kbmemused": mem_parts[2],
-                "memused_percent": mem_parts[3]
+                "kbmemused": mem_parts[3],
+                "memused_percent": mem_parts[4]
             }
         else:
             memory_usage = {}
@@ -98,7 +98,7 @@ def get_sysstat():
         #]
 
         return {
-            "id": "temporary", 
+            "id": "laptop", 
             "timestamp": int(time.time()),
             "cpu_usage_percent": cpu_usage,
             "memory": memory_usage,
@@ -114,7 +114,7 @@ def send_data(server_url):
     if not data:
         print("No data collected")
         return
-
+    print(data)
     headers = {'Content-Type': 'application/json'}
     try:
         # Send via HTTP POST
@@ -146,10 +146,8 @@ if __name__ == "__main__":
     server_url = "http://107.21.161.21:8080"
     
     # For continuous monitoring (uncomment if needed)
-    """
     while True:
         send_data(server_url)
         time.sleep(5)  # Send every 5 seconds
-    """
     # For one-time send
     send_data(server_url)
