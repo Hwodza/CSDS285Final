@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Real-Time JSON Viewer</title>
+  <script src="https://cdn.socket.io/4.6.1/socket.io.min.js"></script>
+  <style>
+    body { font-family: Arial; }
+    .container { margin: 10px; }
+    .card {
+      border: 1px solid #ccc; padding: 10px; margin-bottom: 10px;
+      border-radius: 5px; background-color: #f9f9f9;
+    }
+  </style>
+</head>
+<body>
+  <h1>Live Data</h1>
+  <div id="data-container" class="container"></div>
+
+  <script>
+    const socket = io('http://eecslab-22.case.edu:8000');  // Adjust if hosting elsewhere
+    const container = document.getElementById('data-container');
+    const dataMap = {};
+
+    socket.on('connect', () => {
+      console.log('Connected to WebSocket server');
+    });
+
+    socket.on('update', (data) => {  // data will now be an object with id and data
+      const id = Object.keys(data)[0]; // Get the first key, which is the id
+      const newData = data[id];  // Get the data object associated with the id
+
+      if (!id || typeof newData !== 'object') return;
+
+      let card = dataMap[id];
+      if (!card) {
+        card = document.createElement('div');
+        card.className = 'card';
+        card.id = `card-${id}`;
+        container.appendChild(card);
+        dataMap[id] = card;
+      }
+
+      card.innerHTML = `<strong>ID: ${id}</strong><pre>${JSON.stringify(newData, null, 2)}</pre>`;
+    });
+  </script>
+</body>
+</html>
+

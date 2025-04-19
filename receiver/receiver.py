@@ -1,26 +1,31 @@
-from flask import Flask, request, jsonify
-from flask_cors import CORS  # Import CORS
+import eventlet
+eventlet.monkey_patch()
 
-app = Flask(__name__)
-CORS(app, origins=["http://eecslab-22.case.edu"])  # Only allow this origin
+from flask import Flask, render_template, request, jsonify
+from flask_socketio import SocketIO, emit
+from flask_cors import CORS
 
-# CORS(app)  # Enable CORS for the entire app
+app = Flask(__name__, static_url_path='', static_folder='static')
+CORS(app, origins=["*"])  # For development, you can restrict this later
 
-received_data = []  # Store received JSON objects
-
-@app.route('/data', methods=['POST'])
-def receive_data():
-    global received_data
-    data = request.get_json()
-    if data:
-        received_data.append(data)
-        return jsonify({"message": "Data received successfully", "data": data}), 200
-    return jsonify({"error": "Invalid JSON"}), 400
+socketio = SocketIO(app, cors_allowed_origins="*")
+data_store = {}  # Stores latest data per id
 
 @app.route('/')
-def display_data():
-    return jsonify(received_data)
+def index():
+    return app.send_static_file('index.html')
+
+@socketio.on('json_data')
+def handle_json_data(data):
+    if not isinstance(data, dict) or "id" not in data:
+        print("Ignored packet without 'id':", data)
+        return
+    id_val = data["id"]
+    data_store[id_val] = data
+    print(f"Received and stored data for id={id_val}")
+    # Emit the event with data formatted correctly
+    emit('update', {str(id_val): data}, broadcast=True)  # Ensure id is a string key
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=8000, debug=True)
+    socketio.run(app, host='0.0.0.0', port=8000, debug=True)
 
