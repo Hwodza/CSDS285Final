@@ -258,8 +258,8 @@
                         return;
                     }
                     // Convert to Unix timestamps
-                    const startTimestamp = Math.floor(new Date(start).getTime() / 1000);
-                    const endTimestamp = Math.floor(new Date(end).getTime() / 1000);
+                    const startTimestamp = Math.floor(new Date(startDate).getTime() / 1000);
+                    const endTimestamp = Math.floor(new Date(endDate).getTime() / 1000);
                     url = `/api/device/${deviceId}/history?start=${startTimestamp}&end=${endTimestamp}`;
                 } else {
                     url = `/api/device/${deviceId}/history?hours=${timeRange}`;

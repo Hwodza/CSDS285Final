@@ -180,24 +180,25 @@ async function startServer() {
 
     app.get('/api/device/:id/history', async (req, res) => {
         try {
+            const { id } = req.params;
+            const { hours, start, end } = req.query;
             let query, params;
-        
-            if (req.query.hours) {
-                const hours = parseInt(req.query.hours);
-                const cutoff = Math.floor(Date.now() / 1000) - (hours * 3600);
+            
+            if (hours) {
+                const cutoff = Math.floor(Date.now() / 1000) - (parseInt(hours) * 3600);
                 query = `SELECT * FROM device_stats WHERE device_id = ? AND timestamp >= ? ORDER BY timestamp ASC`;
                 params = [id, cutoff];
             } 
-            else if (req.query.start && req.query.end) {
+            else if (start && end) {
                 query = `SELECT * FROM device_stats WHERE device_id = ? AND timestamp BETWEEN ? AND ? ORDER BY timestamp ASC`;
-                params = [id, req.query.start, req.query.end];
+                params = [id, parseInt(start), parseInt(end)];
             }
             else {
                 return res.status(400).json({ error: 'Invalid time range parameters' });
             }
-
+    
             const rows = await db.all(query, params);
-
+            
             const result = {
                 timestamps: [],
                 cpu: [],
@@ -205,7 +206,7 @@ async function startServer() {
                 network: {},
                 disk: {}
             };
-
+    
             // Initialize network interfaces
             if (rows.length > 0) {
                 const first = JSON.parse(rows[0].network_data);
@@ -213,21 +214,21 @@ async function startServer() {
                     result.network[iface.iface] = { rx: [], tx: [] };
                 });
             }
-
+    
             rows.forEach(row => {
                 const time = new Date(row.timestamp * 1000);
                 result.timestamps.push(time.toLocaleTimeString());
-
+    
                 // CPU data
                 result.cpu.push(row.cpu_usage_percent);
-
+    
                 // Memory data
                 result.memory.push({
                     free: row.kbmemfree,
                     used: row.kbmemused,
                     percent: row.memused_percent
                 });
-
+    
                 // Network data
                 const network = JSON.parse(row.network_data);
                 network.forEach(iface => {
@@ -236,8 +237,8 @@ async function startServer() {
                         result.network[iface.iface].tx.push(iface.tx_kb);
                     }
                 });
-
-                // Disk data (simplified example)
+    
+                // Disk data
                 const disk = JSON.parse(row.disk_data);
                 disk.forEach(d => {
                     if (!result.disk[d.device]) {
@@ -247,14 +248,13 @@ async function startServer() {
                     result.disk[d.device].util.push(d.util);
                 });
             });
-
+    
             res.json(result);
         } catch (e) {
             console.error('Error fetching history:', e);
             res.status(500).json({ error: 'Server error' });
         }
     });
-
     app.get('/', (req, res) => {
         res.sendFile(path.join(__dirname, 'public', 'index.html'));
     });
