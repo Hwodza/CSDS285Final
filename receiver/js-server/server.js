@@ -180,16 +180,23 @@ async function startServer() {
 
     app.get('/api/device/:id/history', async (req, res) => {
         try {
-            const { id } = req.params;
-            const hours = parseInt(req.query.hours) || 24;
-            const cutoff = Math.floor(Date.now() / 1000) - (hours * 3600);
+            let query, params;
+        
+            if (req.query.hours) {
+                const hours = parseInt(req.query.hours);
+                const cutoff = Math.floor(Date.now() / 1000) - (hours * 3600);
+                query = `SELECT * FROM device_stats WHERE device_id = ? AND timestamp >= ? ORDER BY timestamp ASC`;
+                params = [id, cutoff];
+            } 
+            else if (req.query.start && req.query.end) {
+                query = `SELECT * FROM device_stats WHERE device_id = ? AND timestamp BETWEEN ? AND ? ORDER BY timestamp ASC`;
+                params = [id, req.query.start, req.query.end];
+            }
+            else {
+                return res.status(400).json({ error: 'Invalid time range parameters' });
+            }
 
-            const rows = await db.all(`
-                SELECT * FROM device_stats
-                WHERE device_id = ? AND timestamp >= ?
-                ORDER BY timestamp ASC`,
-                [id, cutoff]
-            );
+            const rows = await db.all(query, params);
 
             const result = {
                 timestamps: [],
